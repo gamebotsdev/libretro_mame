@@ -16,6 +16,7 @@ class plugin_options;
 class osd_interface;
 
 class lua_engine;
+class python_engine;
 class cheat_manager;
 class inifile_manager;
 class favorite_manager;
@@ -36,6 +37,7 @@ public:
 
 	plugin_options &plugins() const { return *m_plugins; }
 	lua_engine *lua() { return m_lua.get(); }
+    python_engine *python() { return m_python.get(); }
 
 	virtual void update_machine() override;
 
@@ -57,6 +59,7 @@ public:
 	/* execute as configured by the OPTION_SYSTEMNAME option on the specified options */
 	int execute();
 	void start_luaengine();
+    void start_python_engine();
 	void schedule_new_driver(const game_driver &driver);
 	mame_ui_manager& ui() const { assert(m_ui != nullptr); return *m_ui; }
 	cheat_manager &cheat() const { assert(m_cheat != nullptr); return *m_cheat; }
@@ -77,6 +80,7 @@ private:
 
 	std::unique_ptr<plugin_options> m_plugins;              // pointer to plugin options
 	std::unique_ptr<lua_engine> m_lua;
+	std::unique_ptr<python_engine> m_python;
 
 	const game_driver *     m_new_driver_pending;   // pointer to the next pending driver
 	bool                    m_firstrun;

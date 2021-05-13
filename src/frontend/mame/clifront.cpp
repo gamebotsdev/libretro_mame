@@ -271,6 +271,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
 	manager->start_luaengine();
 
+    manager->start_python_engine();
+
 	if (option_errors.tellp() > 0)
 		osd_printf_error("Error in command line:\n%s\n", strtrimspace(option_errors.str()));
 

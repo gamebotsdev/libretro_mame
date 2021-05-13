@@ -20,6 +20,7 @@
 #include "clifront.h"
 #include "emuopts.h"
 #include "luaengine.h"
+#include "python_engine.h"
 #include "mameopts.h"
 #include "pluginopts.h"
 #include "rendlay.h"
@@ -60,6 +61,7 @@ mame_machine_manager::mame_machine_manager(emu_options &options,osd_interface &o
 	machine_manager(options, osd),
 	m_plugins(std::make_unique<plugin_options>()),
 	m_lua(std::make_unique<lua_engine>()),
+	m_python(std::make_unique<python_engine>()),
 	m_new_driver_pending(nullptr),
 	m_firstrun(true),
 	m_autoboot_timer(nullptr)
@@ -74,6 +76,7 @@ mame_machine_manager::mame_machine_manager(emu_options &options,osd_interface &o
 mame_machine_manager::~mame_machine_manager()
 {
 	m_lua.reset();
+	m_python.reset();
 	s_manager = nullptr;
 }
 
@@ -103,8 +106,13 @@ void mame_machine_manager::schedule_new_driver(const game_driver &driver)
 
 void mame_machine_manager::update_machine()
 {
-	m_lua->set_machine(m_machine);
+    // Lua engine
+    m_lua->set_machine(m_machine);
 	m_lua->attach_notifiers();
+
+    // Python engine
+    m_python->set_machine(m_machine);
+    m_python->attach_lifecycle_hooks();
 }
 
 
@@ -206,6 +214,15 @@ void mame_machine_manager::start_luaengine()
 			m_lua->load_script(exppath.c_str());
 		}
 	}
+}
+
+//-------------------------------------------------
+//  Start Python Engine
+//-------------------------------------------------
+
+void mame_machine_manager::start_python_engine()
+{
+    m_python->initialize();
 }
 
 #if defined(__LIBRETRO__)
@@ -399,9 +416,16 @@ void retro_main_loop()
 
 TIMER_CALLBACK_MEMBER(mame_machine_manager::autoboot_callback)
 {
-	if (strlen(options().autoboot_script())!=0) {
-		mame_machine_manager::instance()->lua()->load_script(options().autoboot_script());
-	}
+    const char *script_filename = options().autoboot_script();
+    int filename_length = strlen(script_filename);
+    if (filename_length>3) {
+        if (strcmp(script_filename + filename_length - 4, ".lua") == 0) {
+            mame_machine_manager::instance()->lua()->load_script(script_filename);
+        }
+        if (strcmp(script_filename + filename_length - 3, ".py") == 0) {
+            mame_machine_manager::instance()->python()->load_script(script_filename);
+        }
+    }
 	else if (strlen(options().autoboot_command())!=0) {
 		std::string cmd = std::string(options().autoboot_command());
 		strreplace(cmd, "'", "\\'");
@@ -439,6 +463,7 @@ void mame_machine_manager::ui_initialize(running_machine& machine)
 void mame_machine_manager::before_load_settings(running_machine& machine)
 {
 	m_lua->on_machine_before_load_settings();
+    m_python->on_machine_before_load_settings();
 }
 
 void mame_machine_manager::create_custom(running_machine& machine)
@@ -518,17 +543,25 @@ void emulator_info::draw_user_interface(running_machine& machine)
 
 void emulator_info::periodic_check()
 {
-	return mame_machine_manager::instance()->lua()->on_periodic();
+	mame_machine_manager::instance()->lua()->on_periodic();
+
+    mame_machine_manager::instance()->python()->on_periodic();
 }
 
 bool emulator_info::frame_hook()
 {
-	return mame_machine_manager::instance()->lua()->frame_hook();
+	bool lua_result = mame_machine_manager::instance()->lua()->frame_hook();
+
+	bool python_result = mame_machine_manager::instance()->python()->after_frame_update();
+
+    return lua_result && python_result;
 }
 
 void emulator_info::sound_hook()
 {
 	return mame_machine_manager::instance()->lua()->on_sound_update();
+
+    mame_machine_manager::instance()->python()->on_sound_update();
 }
 
 void emulator_info::layout_script_cb(layout_file &file, const char *script)
