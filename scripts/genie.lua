@@ -1562,6 +1562,10 @@ if (STANDALONE~=true) then
 	dofile(path.join("src", "mame", "frontend.lua"))
 end
 
+group "gamebots"
+
+dofile(path.join("src", "gamebots", "python_engine.lua"))
+
 group "devices"
 dofile(path.join("src", "devices.lua"))
 devicesProject(_OPTIONS["target"],_OPTIONS["subtarget"])

@@ -124,6 +124,7 @@ endif
 ##################   END USER-CONFIGURABLE OPTIONS   ######################
 ###########################################################################
 
+-include gamebots.mak
 
 ifndef MAKETYPE
 MAKETYPE := gmake
