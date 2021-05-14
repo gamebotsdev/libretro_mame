@@ -63,11 +63,6 @@ if _OPTIONS["USE_PYTHON_ENGINE"]~=nil and tonumber(_OPTIONS["USE_PYTHON_ENGINE"]
         PYBIND11_SRC .. "/include"
     }
 
-    files {
-        PYTHON_ENGINE_SRC .. "/**.h",
-        PYTHON_ENGINE_SRC .. "/**.cpp",
-    }
-
     if _OPTIONS["targetos"]~="asmjs" then
         includedirs {
             PYTHON_HEADERS,
